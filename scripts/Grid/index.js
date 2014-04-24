@@ -187,22 +187,7 @@ function onMouseMove(event) {
     var position = cpos.add(diff);
 
 
-    if (state) {
-        if (position.x >= -15 && position.x <= 15 && position.y >= -15 && position.y <= 15) {
 
-            for (var i = 0; i < floors.length; i++) {
-                var top = floors[i].position.y - 5;
-                var left = floors[i].position.x - 5;
-                var right = floors[i].position.x + 5;
-                var bottom = floors[i].position.y + 5;
-                if (position.x >= left && position.x <= right && position.y >= top && position.y <= bottom) {
-                    floors[i].material.color.setRGB (0, 0, 1);
-                } else {
-                    floors[i].material.color.setRGB (0.5, 1, 0);
-                }
-            }
-        }
-    }
 }
 
 animate();
