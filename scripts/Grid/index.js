@@ -210,11 +210,6 @@ function onMouseMove(event) {
     // Берем позицию камеры
     var cpos = camera.position.clone();
 
-    addLog('cPos');
-    addLog(cpos.x);
-    addLog(cpos.y);
-    addLog(cpos.z);
-
     // К поцизии камеры добавляем разницу
     var position = cpos.add(diff);
 
