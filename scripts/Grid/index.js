@@ -168,60 +168,23 @@ function onMouseMove(event) {
     // Создаем некий вектор с этими значениями
     var vector = new THREE.Vector3(x, y, 0);
 
-    clearLog();
-    addLog('Origin');
-    addLog(vector.x);
-    addLog(vector.y);
-    addLog(vector.z);
-
-
     // Меняем положение вектора на положение камеры
     projector.unprojectVector(vector, camera);
-
-    addLog('Unproject');
-    addLog(vector.x);
-    addLog(vector.y);
-    addLog(vector.z);
 
     // Вычитаем из вектора позицию камеры и нормализуем
     var direction = vector.sub(camera.position).normalize();
 
-    addLog('Normal Direction');
-    addLog(vector.x);
-    addLog(vector.y);
-    addLog(vector.z);
-
-
     // Узнаем дистанцию между камерой и направлением ?
     var distance = -camera.position.z / direction.z;
-
-    addLog('Distance');
-    addLog(distance);
-
 
     // Умножаем направление на дистанцию
     var diff = direction.multiplyScalar(distance);
 
-    addLog('Diff');
-    addLog(diff.x);
-    addLog(diff.y);
-    addLog(diff.z);
-
     // Берем позицию камеры
     var cpos = camera.position.clone();
 
-    addLog('cPos');
-    addLog(cpos.x);
-    addLog(cpos.y);
-    addLog(cpos.z);
-
     // К поцизии камеры добавляем разницу
     var position = cpos.add(diff);
-
-    addLog('Position');
-    addLog(position.x);
-    addLog(position.y);
-    addLog(position.z);
 
 
     if (state) {
