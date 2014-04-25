@@ -18,7 +18,7 @@ var scene = new THREE.Scene();
 
 // CAMERA
 var camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
-camera.position.set(0, 0, 255);
+camera.position.set(0, 0, 55);
 camera.lookAt(scene.position);
 
 // RENDERER
@@ -43,11 +43,16 @@ var controls = new THREE.OrbitControls(camera, renderer.domElement);
 //endregion
 
 //region FLOOR
-var floorGeometry = new THREE.PlaneGeometry(10, 10, 1, 1);
+var floorGeometry = new THREE.PlaneGeometry(5, 5, 1, 1);
 
 // Размерность массива
-var floorX = 10;
-var floorY = 10;
+var floorX = 100;
+var floorY = 100;
+
+// Сетка для библиотеки поиска пути
+var PFgrid = new PF.Grid(floorX, floorY);
+// Алгоритм поиска пути
+var PFFinder = new PF.AStarFinder({allowDiagonal: true});
 
 // Создаем двумерный массив
 var floors = new Array(floorX);
@@ -55,13 +60,12 @@ for (var i = 0; i < floorX; i++) {
     floors[i] = new Array(floorY);
 }
 
-
 // Заполняем двумерный массив
 for (var i = 0; i < floorX; i++) {
     for (var j = 0; j < floorY; j++) {
         floors[i][j] = new THREE.Mesh(floorGeometry, new THREE.MeshBasicMaterial({ color: 0x119922, side: THREE.DoubleSide }));
-        floors[i][j].position.x = i * 10;
-        floors[i][j].position.y = j * -10;
+        floors[i][j].position.x = i * 5;
+        floors[i][j].position.y = j * -5;
         floors[i][j].userData = {'x': i, 'y': j};
         scene.add(floors[i][j]);
     }
@@ -85,12 +89,31 @@ function onMouseMove(event) {
 
     raycaster = projector.pickingRay(mouse2D.clone(), camera);
 
+    // Ищем столкновения рейкаста для каждого массива квадратов
     for (var i = 0; i < floorX; i++) {
+        // Берем столкновения
         var intercasts = raycaster.intersectObjects(floors[i]);
-        if(intercasts.length > 0){
-            if(cursor != intercasts[0].object) {
+
+        // Если они есть
+        if (intercasts.length > 0) {
+            // И это столкновение не тот же самый объект что предыдущий
+            if (cursor != intercasts[0].object) {
+                // Ставим новый найденный текущим
                 cursor = intercasts[0].object;
-                cursor.material.color = 0xaa0055;
+
+                // Ищем как пройти от 0,0 до того, где курсор
+                var PFPath = PFFinder.findPath(0, 0, cursor.userData.x, cursor.userData.y, PFgrid.clone());
+
+                for (var k = 0; k < floorX; k++) {
+                    for (var j = 0; j < floorY; j++) {
+                        floors[k][j].material.color.setHex(0x119922);
+                    }
+                }
+
+                for(var i = 0; i < PFPath.length; i++){
+                    var cell = PFPath[i];
+                    floors[cell[0]][cell[1]].material.color.setHex(0xff0022);
+                }
             }
         }
     }
