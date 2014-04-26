@@ -3,7 +3,8 @@
  */
 'use strict';
 
-//region base
+//region STATS, SCENE, CAMERA, RENDERER, LIGHT, SKYBOX, CONTROLS
+
 // STATS
 var stats = new Stats();
 stats.setMode(0);
@@ -12,23 +13,21 @@ stats.domElement.style.left = '0px';
 stats.domElement.style.top = '0px';
 document.body.appendChild(stats.domElement);
 
-var scene, camera, renderer, controls, light;
-
 // SCENE
-scene = new THREE.Scene();
+var scene = new THREE.Scene();
 
 // CAMERA
-camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
-camera.position.set(0, 0, 50);
+var camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
+camera.position.set(0, 0, 55);
 camera.lookAt(scene.position);
 
 // RENDERER
-renderer = new THREE.WebGLRenderer({antialias : true});
+var renderer = new THREE.WebGLRenderer({antialias: true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // LIGHT
-light = new THREE.PointLight(0x44fe3f);
+var light = new THREE.PointLight(0x44fe3f);
 light.position.set(100, 250, 100);
 scene.add(light);
 
@@ -39,125 +38,46 @@ var skyBox = new THREE.Mesh(skyBoxGeometry, skyBoxMaterial);
 scene.add(skyBox);
 
 // CONTROLS
-controls = new THREE.OrbitControls(camera, renderer.domElement);
-
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
 
 //endregion
 
-//region floor
-var floorGeometry = new THREE.PlaneGeometry(10, 10, 1, 1);
-var floors = [];
+//region FLOOR
+var floorGeometry = new THREE.PlaneGeometry(5, 5, 1, 1);
 
-for (var i = 0; i < 18; i++) {
-    floors.push(new THREE.Mesh(floorGeometry, new THREE.MeshBasicMaterial({ color: 0x119922, side: THREE.DoubleSide })));
+// Размерность массива
+var floorX = 100;
+var floorY = 100;
+
+// Сетка для библиотеки поиска пути
+var PFgrid = new PF.Grid(floorX, floorY);
+// Алгоритм поиска пути
+var PFFinder = new PF.AStarFinder({allowDiagonal: true});
+
+// Создаем двумерный массив
+var floors = new Array(floorX);
+for (var i = 0; i < floorX; i++) {
+    floors[i] = new Array(floorY);
 }
 
-floors[0].position.x = -10;
-floors[0].position.y = -10;
-floors[0].material.color.setRGB (0.2, 0.8, 0.2);
-
-floors[1].position.x = 0;
-floors[1].position.y = -10;
-floors[1].material.color.setRGB (0.2, 0.8, 0.2);
-
-floors[2].position.x = 10;
-floors[2].position.y = -10;
-floors[2].material.color.setRGB (0.2, 0.8, 0.2);
-
-floors[3].position.x = -10;
-floors[3].position.y = 0;
-floors[3].material.color.setRGB (0.2, 0.8, 0.2);
-
-floors[4].position.x = 0;
-floors[4].position.y = 0;
-floors[4].material.color.setRGB (0.2, 0.8, 0.2);
-
-floors[5].position.x = 10;
-floors[5].position.y = 0;
-floors[5].material.color.setRGB (0.2, 0.8, 0.2);
-
-floors[6].position.x = -10;
-floors[6].position.y = 10;
-floors[6].material.color.setRGB (0.2, 0.8, 0.2);
-
-floors[7].position.x = 0;
-floors[7].position.y = 10;
-floors[7].material.color.setRGB (0.2, 0.8, 0.2);
-
-floors[8].position.x = 10;
-floors[8].position.y = 10;
-floors[8].material.color.setRGB (0.2, 0.8, 0.2);
-
-
-floors[9].position.x = -10;
-floors[9].position.y = -10;
-floors[9].position.z = 10;
-
-floors[10].position.x = 0;
-floors[10].position.y = -10;
-floors[10].position.z = 10;
-
-floors[11].position.x = 10;
-floors[11].position.y = -10;
-floors[11].position.z = 10;
-
-floors[12].position.x = -10;
-floors[12].position.y = 0;
-floors[12].position.z = 10;
-
-floors[13].position.x = 0;
-floors[13].position.y = 0;
-floors[13].position.z = 10;
-
-floors[14].position.x = 10;
-floors[14].position.y = 0;
-floors[14].position.z = 10;
-
-floors[15].position.x = -10;
-floors[15].position.y = 10;
-floors[15].position.z = 10;
-
-floors[16].position.x = 0;
-floors[16].position.y = 10;
-floors[16].position.z = 10;
-
-floors[17].position.x = 10;
-floors[17].position.y = 10;
-floors[17].position.z = 10;
-
-for (var i = 0; i < floors.length; i++) {
-    scene.add(floors[i]);
+// Заполняем двумерный массив
+for (var i = 0; i < floorX; i++) {
+    for (var j = 0; j < floorY; j++) {
+        floors[i][j] = new THREE.Mesh(floorGeometry, new THREE.MeshBasicMaterial({ color: 0x119922, side: THREE.DoubleSide }));
+        floors[i][j].position.x = i * 5;
+        floors[i][j].position.y = j * -5;
+        floors[i][j].userData = {'x': i, 'y': j};
+        scene.add(floors[i][j]);
+    }
 }
 
 //endregion
 
 var projector = new THREE.Projector();
-var state;
+var raycaster;
+var cursor;
 
 window.addEventListener('mousemove', onMouseMove, false);
-window.addEventListener('keydown', onKeyDown, false);
-
-function addLog(string){
-    var log = document.getElementById('log');
-    log.innerText += string + '\n';
-}
-
-function clearLog(){
-    var log = document.getElementById('log');
-    log.innerText = '';
-}
-
-function onKeyDown(event) {
-    // KeyCode 32 (SPACE)
-    if (event.keyCode == 32) {
-        state = 1;
-    }
-
-    // KeyCode 83 (S)
-    if (event.keyCode == 83) {
-        state = 0;
-    }
-}
 
 function onMouseMove(event) {
     // Получаем значение x от -1 до 1
@@ -165,72 +85,34 @@ function onMouseMove(event) {
     // Получаем значение y от -1 до 1
     var y = -( event.clientY / window.innerHeight ) * 2 + 1;
 
-    // Создаем некий вектор с этими значениями
-    var vector = new THREE.Vector3(x, y, 0);
+    var mouse2D = new THREE.Vector3(x, y, 0.5);
 
-    clearLog();
-    addLog('Origin');
-    addLog(vector.x);
-    addLog(vector.y);
-    addLog(vector.z);
+    raycaster = projector.pickingRay(mouse2D.clone(), camera);
 
+    // Ищем столкновения рейкаста для каждого массива квадратов
+    for (var i = 0; i < floorX; i++) {
+        // Берем столкновения
+        var intercasts = raycaster.intersectObjects(floors[i]);
 
-    // Меняем положение вектора на положение камеры
-    projector.unprojectVector(vector, camera);
+        // Если они есть
+        if (intercasts.length > 0) {
+            // И это столкновение не тот же самый объект что предыдущий
+            if (cursor != intercasts[0].object) {
+                // Ставим новый найденный текущим
+                cursor = intercasts[0].object;
 
-    addLog('Unproject');
-    addLog(vector.x);
-    addLog(vector.y);
-    addLog(vector.z);
+                // Ищем как пройти от 0,0 до того, где курсор
+                var PFPath = PFFinder.findPath(0, 0, cursor.userData.x, cursor.userData.y, PFgrid.clone());
 
-    // Вычитаем из вектора позицию камеры и нормализуем
-    var direction = vector.sub(camera.position).normalize();
+                for (var k = 0; k < floorX; k++) {
+                    for (var j = 0; j < floorY; j++) {
+                        floors[k][j].material.color.setHex(0x119922);
+                    }
+                }
 
-    addLog('Normal Direction');
-    addLog(vector.x);
-    addLog(vector.y);
-    addLog(vector.z);
-
-
-    // Узнаем дистанцию между камерой и направлением ?
-    var distance = -camera.position.z / direction.z;
-
-    addLog('Distance');
-    addLog(distance);
-
-
-    // Умножаем направление на дистанцию
-    var diff = direction.multiplyScalar(distance);
-
-    addLog('Diff');
-    addLog(diff.x);
-    addLog(diff.y);
-    addLog(diff.z);
-
-    // Берем позицию камеры
-    var cpos = camera.position.clone();
-
-    // К поцизии камеры добавляем разницу
-    var position = cpos.add(diff);
-
-    addLog('Position');
-    addLog(position.x);
-    addLog(position.y);
-    addLog(position.z);
-
-
-    if (state) {
-        if (position.x >= -15 && position.x <= 15 && position.y >= -15 && position.y <= 15) {
-
-            for (var i = 0; i < floors.length; i++) {
-                var top = floors[i].position.y - 5;
-                var left = floors[i].position.x - 5;
-                var right = floors[i].position.x + 5;
-                var bottom = floors[i].position.y + 5;
-                if (position.x >= left && position.x <= right && position.y >= top && position.y <= bottom) {
-                    floors[i].material.color.setRGB (0, 0, 1);
-                } else {
-                    floors[i].material.color.setRGB (0.5, 1, 0);
+                for(var i = 0; i < PFPath.length; i++){
+                    var cell = PFPath[i];
+                    floors[cell[0]][cell[1]].material.color.setHex(0xff0022);
                 }
             }
         }
