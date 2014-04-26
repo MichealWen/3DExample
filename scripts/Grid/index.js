@@ -3,6 +3,9 @@
  */
 'use strict';
 
+var STATE = {NONE: 0, MOVE: 1};
+var state = STATE.NONE;
+
 //region STATS, SCENE, CAMERA, RENDERER, LIGHT, SKYBOX, CONTROLS
 
 // STATS
@@ -58,7 +61,6 @@ var floorY = 30;
 var PFgrid = new PF.Grid(floorX, floorY);
 // Алгоритм поиска пути
 var PFFinder = new PF.AStarFinder({allowDiagonal: true});
-//var PFFinder = new PF.AStarFinder({allowDiagonal: false});
 
 // Создаем двумерный массив
 var floors = new Array(floorX);
@@ -82,6 +84,7 @@ for (var i = 0; i < floorX; i++) {
 var projector = new THREE.Projector();
 var raycaster;
 var cursor;
+var CursorIntersect;
 
 var PlayerGridPosition = new THREE.Vector2(15, 15);
 var PlayerObject = new THREE.Mesh(new THREE.CubeGeometry(5, 5, 5), new THREE.MeshLambertMaterial({ color: 0xffffff }))
@@ -91,20 +94,21 @@ PlayerObject.position.setZ(2.5);
 var PFPath;
 var RoadPoints = [];
 var StepIndex = 0;
-var STATE = {NONE: 0, MOVE: 1}
-var state = STATE.NONE;
+
 
 scene.add(PlayerObject);
+
+window.addEventListener( 'contextmenu', function ( event ) { event.preventDefault(); }, false );
+window.addEventListener('mousedown', onMouseDown, false);
 window.addEventListener('mousemove', onMouseMove, false);
 window.addEventListener('keydown', onKeyDown, false);
-window.addEventListener('mousedown', onMouseDown, false);
 
 function onMouseDown(event) {
+
     if (event.button === 0 && PFPath && PFPath.length > 1) {
         RoadPoints.splice(0, RoadPoints.length);
 
         var geometry = new THREE.Geometry();
-
 
         for (var i = 1; i < PFPath.length; i++) {
             RoadPoints.push( {
@@ -123,6 +127,23 @@ function onMouseDown(event) {
 
         state = STATE.MOVE;
     }
+
+    if(event.button === 2){
+        var cubeGeometry = new THREE.BoxGeometry( 5, 5, 5 );
+        var cubeMaterial = new THREE.MeshLambertMaterial( { color: 0xFF0010, overdraw: 0.5 } );
+        var voxel = new THREE.Mesh( cubeGeometry, cubeMaterial );
+        var x = cursor.userData.x;
+        var y = cursor.userData.y;
+        var wx = floors[x][y].position.x;
+        var wy = floors[x][y].position.y;
+
+        voxel.position.set(wx, wy, 2.5);
+
+        PFgrid.setWalkableAt(x, y, false);
+
+        scene.add( voxel );
+    }
+
 }
 
 function onMouseMove(event) {
@@ -146,7 +167,7 @@ function onMouseMove(event) {
             if (cursor != intercasts[0].object) {
                 // Ставим новый найденный текущим
                 cursor = intercasts[0].object;
-
+                CursorIntersect = intercasts[0];
                 // Ищем как пройти от 0,0 до того, где курсор
                 PFPath = PFFinder.findPath(PlayerGridPosition.x, PlayerGridPosition.y, cursor.userData.x, cursor.userData.y, PFgrid.clone());
 
@@ -255,10 +276,8 @@ function update() {
             if (PlayerObject.position.distanceTo(RoadPoints[StepIndex].world) > 0.2) {
                 PlayerObject.lookAt(RoadPoints[StepIndex].world);
                 PlayerObject.translateOnAxis(new THREE.Vector3(0, 0, 1), 0.2);
-                console.log('q')
             } else {
                 if (RoadPoints.length > StepIndex) {
-                    console.log('e')
                     PlayerGridPosition.x = RoadPoints[StepIndex].grid.x;
                     PlayerGridPosition.y = RoadPoints[StepIndex].grid.y;
                     StepIndex++;
